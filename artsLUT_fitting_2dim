@@ -1,0 +1,388 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+# -*- coding: latin-1 -*-
+
+import numpy as np
+from scipy.linalg import lstsq 
+import matplotlib.pyplot as plt 
+from pyarts import arts
+from pyarts.plots import arts_lookup
+import FluxSimulator as fsm
+import pandas as pd 
+import openpyxl as ol 
+
+#define pressure grid 
+#take pressure dependent cross section of ozone at 270 K 
+
+# set frequency grid
+min_wvn = 5
+#min_wvn_micro = 0.01
+
+max_wvn = 3210
+#max_wvn_micro = 10
+
+n_freq_lw = 200
+wvn = np.linspace(min_wvn, max_wvn, n_freq_lw)
+#wvn_micro = np.linspace(min_wvn_micro, max_wvn_micro, n_freq_lw)
+f_grid_lw = arts.convert.kaycm2freq(wvn)
+species = ['CO$_2$', 'O$_3$','CH$_4$']
+
+
+# setup ARTS
+flux_simulator_LUT = fsm.FluxSimulator("TESTLUT_SW")
+flux_simulator_LUT.ws.f_grid = f_grid_lw
+flux_simulator_LUT.set_species(
+    ["CO2,CO2-CKDMT252","O3","CH4"]
+)
+
+
+# Wide LUT
+flux_simulator_LUT.get_lookuptableWide(recalc=False)
+LUT = flux_simulator_LUT.ws.abs_lookup.value
+
+#import physical parameters from table 
+physical_params = pd.read_excel('/Users/hdamerow/master_thesis/1 dim fits of the p_dependent absorption cross section_LUT_O3_CO2_atm.xlsx')
+
+#import same excel file as workbook 
+excel_table_cross_sections = ol.load_workbook('/Users/hdamerow/master_thesis/1 dim fits of the p_dependent absorption cross section_LUT_O3_CO2_atm.xlsx')
+excel_sheet_cross_sections = excel_table_cross_sections['Sheet1']
+
+#temperature = physical_params.iat[4,2]
+#temperature = physical_params.at[4,'[K]']
+#print("excel temperature", temperature)
+
+temperaturepoint = 5
+specienumber = 1
+frequencynumber = 62
+pressure = 11
+temperature = LUT.t_pert[temperaturepoint] + LUT.t_ref[temperaturepoint]
+
+x = np.log10(LUT.p_grid)
+#x = LUT.p_grid
+#y = np.log10(LUT.xsec[temperaturepoint,specienumber,frequencynumber,:]) 
+#y = LUT.xsec[temperaturepoint,specienumber,frequencynumber,:]/x
+#y = 1/(LUT.xsec[temperaturepoint,specienumber,frequencynumber,:]) 
+#sigmoid y
+y = np.log10(LUT.xsec[temperaturepoint,specienumber,frequencynumber,:])
+
+
+#now try out the 2 dimensional fit
+#z_data = LUT.xsec[5,0,6,:]
+#y = LUT.t_pert +LUT.t_ref
+#x = np.log10(LUT.p_grid)
+
+#x = np.array([0,2,4,6,8,10])
+#y = np.array([1,10,20,40,60,80])
+#X,Y = np.meshgrid(x,y)
+
+#z_data =np.array([[1,2,4,6,10,12],[2,5,4,7,7,9,],[1,1,1,3,3,3,],[2,6,4,8,10,15],[2,3,2,3,2,3],[10,20,40,60,80,2]])
+#z_data = np.ndarray.flatten(z_data)
+
+#real interesting data 
+
+
+x = np.log10(LUT.p_grid)
+#print("T_pert shape", np.shape(LUT.t_pert))
+#print("T_ref shape", np.shape(LUT.t_ref))
+y = LUT.t_pert + LUT.t_ref
+X,Y = np.meshgrid(x,y)
+z_data = np.ndarray.flatten(np.log10(LUT.xsec[:,specienumber,frequencynumber,:]))
+z_data_array = np.log10(LUT.xsec[:,specienumber,frequencynumber,:])
+
+
+#z_data =np.array([[1,2,4,6,10,12],[2,5,4,7,7,9,],[1,1,1,3,3,3,],[2,6,4,8,10,15],[2,3,2,3,2,3],[10,20,40,60,80,2]])
+#z_data = np.ndarray.flatten(z_data)
+#z_data_array = np.array([[1,2,4,6,10,12],[2,5,4,7,7,9,],[1,1,1,3,3,3,],[2,6,4,8,10,15],[2,3,2,3,2,3],[10,20,40,60,80,2]])
+
+
+
+
+
+def lin_fit_2dim(x,y,z):
+    #tell which fit you want to do 
+    #here a linear fit at x 
+    
+    #x = np.log10(LUT.p_grid)
+    #y = LUT.t_pert + LUT.t_ref
+    #z = np.array(z)
+    #X,Y = np.meshgrid(x,y)
+    #M = np.ones((144,3))
+    #x_flatten = np.ndarray.flatten(x)
+    #y_flatten = np.ndarray.flatten(y)
+    #print(x_flatten)
+    #print(y_flatten)
+    #build your own M
+    #import numpy as np 
+
+    """"
+        M = np.ones((144,3))
+        i = 0   
+        j = 0
+        k = 0
+        l = 0
+        while i < 12:
+            while l < 12:
+                M[j,1] = x[i]
+                j = j + 1
+                l = l + 1
+            i = i + 1
+            l = 0
+        j = 0
+        l = 0
+        i = 0
+        while i < 12:
+            while l < 12:
+                M[j,2] = y[l]
+                j = j + 1
+                l = l + 1
+            i = i + 1
+            l = 0
+
+        """""
+
+    #x = np.log10(LUT.p_grid)
+    #y = LUT.t_pert + LUT.t_ref
+    z = np.array(z)
+    X,Y = np.meshgrid(x,y)
+    M = np.ones((144,3))
+    x_flatten = np.ndarray.flatten(X)
+    y_flatten = np.ndarray.flatten(Y)
+    #M = np.ones((len(x),3))
+    #M = np.ones((144,3))
+    #print(x_flatten)
+    #print(y_flatten)
+    M[:,1] = x_flatten  
+    M[:,2] = y_flatten
+    #M[:,3] = x**3
+    #  do the quad fit
+    poly, res, s, sing = lstsq(M,z)
+    #print(poly)
+    #print(res)
+    #print("M-Matrix: ", M)
+    return poly
+#object encapsulates the 2 dimesional log(p)-log(T) fitting at a fixed frequency of the log(cross section)
+result = lin_fit_2dim(x,y,z_data)
+#print (np.shape(z_data))
+
+#construct the 2 dimensional linear fitting function 
+def lin_fit_2dim_func(x,y):
+    z = result[0] + result[1] * x + result[2] *y
+    #z = -26.98 + 0.8688 * x + result[2] *y*0
+    return z 
+
+#object encapsulates the 2 dimesional linear fitting function 
+fitted_z_data = lin_fit_2dim_func(X,Y)
+print(fitted_z_data)
+
+#evaluates fitting quality of your 2 dimensional linear fitting plot 
+def lin_fit_2dim_qual(x,y,z):
+    #x = np.log10(LUT.p_grid)
+    #y = LUT.t_pert + LUT.t_ref
+    z = np.array(z)
+    X,Y = np.meshgrid(x,y)
+    M = np.ones((144,3))
+    x_flatten = np.ndarray.flatten(X)
+    y_flatten = np.ndarray.flatten(Y)
+    #M = np.ones((len(x),3))
+    #M = np.ones((144,3))
+    #print(x_flatten)
+    #print(y_flatten)
+    M[:,1] = x_flatten  
+    M[:,2] = y_flatten
+    #M[:,3] = x**3
+    #  do the quad fit
+    poly, res, s, sing = lstsq(M,z)
+    #print(poly)
+    #print(res)
+    #print("M-Matrix: ", M)
+    return res
+
+def quad_fit_2dim(x,y,z):
+    #tell which fit you want to do 
+    #here a linear fit at x 
+    
+    #x = np.log10(LUT.p_grid)
+    #y = LUT.t_pert + LUT.t_ref
+    #z = np.array(z)
+    #X,Y = np.meshgrid(x,y)
+    #M = np.ones((144,3))
+    #x_flatten = np.ndarray.flatten(x)
+    #y_flatten = np.ndarray.flatten(y)
+    #print(x_flatten)
+    #print(y_flatten)
+    #build your own M
+    #import numpy as np 
+
+    """"
+        M = np.ones((144,3))
+        i = 0   
+        j = 0
+        k = 0
+        l = 0
+        while i < 12:
+            while l < 12:
+                M[j,1] = x[i]
+                j = j + 1
+                l = l + 1
+            i = i + 1
+            l = 0
+        j = 0
+        l = 0
+        i = 0
+        while i < 12:
+            while l < 12:
+                M[j,2] = y[l]
+                j = j + 1
+                l = l + 1
+            i = i + 1
+            l = 0
+
+        """""
+
+    #x = np.log10(LUT.p_grid)
+    #y = LUT.t_pert + LUT.t_ref
+    z = np.array(z)
+    X,Y = np.meshgrid(x,y)
+    M = np.ones((144,4))
+    x_flatten = np.ndarray.flatten(X)
+    y_flatten = np.ndarray.flatten(Y)
+    #M = np.ones((len(x),3))
+    #M = np.ones((144,3))
+    #print(x_flatten)
+    #print(y_flatten)
+    M[:,1] = x_flatten  
+    M[:,2] = y_flatten
+    M[:,3] = x_flatten**2
+    #M[:,3] = x**3
+    #  do the quad fit
+    poly, res, s, sing = lstsq(M,z)
+    #print(poly)
+    #print(res)
+    #print("M-Matrix: ", M)
+    return poly
+#object encapsulates the 2 dimesional log(p)-log(T) fitting at a fixed frequency of the log(cross section)
+result_quad = quad_fit_2dim(x,y,z_data)
+#print (np.shape(z_data))
+
+#construct the 2 dimensional linear fitting function 
+def quad_fit_2dim_func(x,y):
+    z = result_quad[0] + result_quad[1] * x + result_quad[2] *y + result_quad[3] * x**2
+    #z = -26.98 + 0.8688 * x + result[2] *y*0
+    return z 
+
+#object encapsulates the 2 dimesional linear fitting function 
+fitted_z_data_quad = quad_fit_2dim_func(X,Y)
+print(fitted_z_data_quad)
+
+#evaluates fitting quality of your 2 dimensional linear fitting plot 
+def quad_fit_2dim_qual(x,y,z):
+    #x = np.log10(LUT.p_grid)
+    #y = LUT.t_pert + LUT.t_ref
+    z = np.array(z)
+    X,Y = np.meshgrid(x,y)
+    M = np.ones((144,4))
+    x_flatten = np.ndarray.flatten(X)
+    y_flatten = np.ndarray.flatten(Y)
+    #M = np.ones((len(x),3))
+    #M = np.ones((144,3))
+    #print(x_flatten)
+    #print(y_flatten)
+    M[:,1] = x_flatten  
+    M[:,2] = y_flatten
+    M[:,3] = x_flatten**2
+    #M[:,3] = x**3
+    #  do the quad fit
+    poly, res, s, sing = lstsq(M,z)
+    #print(poly)
+    #print(res)
+    #print("M-Matrix: ", M)
+    return res
+
+
+#now the fitting quality evaluation function from the 2 dimensional linear fittimg is called and finally output 
+fitted_z_data_res = lin_fit_2dim_qual(x,y,z_data)
+print("2 dim res error is ",fitted_z_data_res )
+mean_vector_2dim = np.mean(z_data)*z_data/z_data
+r_squared_2dim = 1 - fitted_z_data_res/(np.sum((z_data - mean_vector_2dim)**2))
+print("2 dim R$^2$ of 2 dim linear fitting with ln(p) and T is: ", r_squared_2dim)
+
+#now print in a 3 dimensioanl plot the 2 dimensional linear function of the p-T dependance of the absorption cross section 
+fig, ax = plt.subplots(subplot_kw = {"projection":"3d"})
+ax.plot_surface(X,Y,z_data_array)
+ax.scatter(X,Y,z_data_array)
+ax.set_ylabel("T [K]")
+ax.set_xlabel("log(p/p$_0$)")
+ax.set_zlabel("log(σ/σ$_0$)")
+#sigma is the absorption cross section 
+ax.set_title("log(σ/σ$_0$) p-T-fit at  295 cm$^{-1}$ of O$_3$")
+ax.plot_surface(X,Y,fitted_z_data, cmap ='viridis')
+plt.show()
+X,Y = np.meshgrid(x,y)
+#M = np.ones((144,3))
+x_flatten = np.ndarray.flatten(X)
+print(np.shape(X))
+print(np.shape(x_flatten))
+#path_2dim = '/Users/hdamerow/master_thesis/pictures Master thesis playground /2dim_plot_log(crosssection)_CO2_109cm^(-1).png'
+#plt.savefig(path_2dim)
+
+
+#now the fitting quality evaluation function from the 2 dimensional quadratic fittimg is called and finally output 
+fitted_z_data_quad_res = quad_fit_2dim_qual(x,y,z_data)
+print("2 dim res error is ",fitted_z_data_quad_res )
+mean_vector_2dim = np.mean(z_data)*z_data/z_data
+r_squared_2dim = 1 - fitted_z_data_quad_res/(np.sum((z_data - mean_vector_2dim)**2))
+print("2 dim R$^2$ of only with ln(p)**2 quadratic is: ", r_squared_2dim)
+
+#now print in a 3 dimensioanl plot the 2 dimensional quadratic function of the p-T dependance of the absorption cross section 
+fig, ax = plt.subplots(subplot_kw = {"projection":"3d"})
+ax.plot_surface(X,Y,z_data_array)
+ax.scatter(X,Y,z_data_array)
+ax.set_ylabel("T [K]")
+ax.set_xlabel("log(p/p$_0$)")
+ax.set_zlabel("log(σ/σ$_0$)")
+#sigma is the absorption cross section 
+ax.set_title("log(σ/σ$_0$) p-T-fit at  295 cm$^{-1}$ of O$_3$")
+ax.plot_surface(X,Y,fitted_z_data_quad, cmap ='viridis')
+plt.show()
+#X,Y = np.meshgrid(x,y)
+#M = np.ones((144,3))
+#x_flatten = np.ndarray.flatten(X)
+#print(np.shape(X))
+#print(np.shape(x_flatten))
+#path_2dim = '/Users/hdamerow/master_thesis/pictures Master thesis playground /2dim_plot_log(crosssection)_CO2_109cm^(-1).png'
+#plt.savefig(path_2dim)
+
+
+"""""
+#build your own M
+x = np.array([0,2,4,6,8,10])
+y = np.array([1,10,20,40,60,80])
+import numpy as np 
+M = np.ones((36,3))
+i = 0
+j = 0
+k = 0
+l = 0
+while i < 6:
+    while l < 6:
+        M[j,1] = x[i]
+        j = j + 1
+        l = l + 1
+    i = i + 1
+    l = 0
+
+j = 0
+l = 0
+i = 0
+while i < 6:
+    while l < 6:
+        M[j,2] = y[l]
+        j = j + 1
+        l = l + 1
+    i = i + 1
+    l = l + 1
+"""""
+
+#print("2dim coefficients", result)
+#print ("M", M)
+#print(z_data)
