@@ -1,0 +1,51 @@
+#now start the fit of the first plots 
+#first do a one dimensional plot of the pressure dependance of the cross section at a fixed temperature 
+
+import numpy as np
+import matplotlib.pyplot as plt 
+from numpy import polyfit, poly1d
+from pyarts import arts 
+from pyarts.plots import arts_lookup
+import FluxSimulator as fsm
+
+# set frequency grid
+min_wvn = 10
+max_wvn = 3210
+n_freq_lw = 200
+wvn = np.linspace(min_wvn, max_wvn, n_freq_lw)
+f_grid_lw = arts.convert.kaycm2freq(wvn)
+
+
+#set up arts with flux simulator 
+flux_simulator_LUT = fsm.FluxSimulator("TESTLUT_SW")
+flux_simulator_LUT.ws.f_grid = f_grid_lw
+flux_simulator_LUT.set_species(
+    ["CO2,CO2-CKDMT252","O3"])
+
+# Wide LUT
+flux_simulator_LUT.get_lookuptableWide(recalc=False)
+LUT = flux_simulator_LUT.ws.abs_lookup.value
+
+
+#x = np.linspace(0,10,10)
+x = np.log10(LUT.p_grid)
+y = np.log(LUT.xsec[5,1,4,:])
+#y = 5 * x**2
+
+plt.plot(x,y)
+
+#do a linear fitting
+d = poly1d(polyfit(x,y,1))
+d2 = poly1d(polyfit(x,y,2))
+
+
+plt.plot(x,d(x), label = 'fit linear')
+plt.plot(x,d2(x), label = 'fit quadratic')
+plt.scatter(x,y, label = 'given data')
+plt.xlabel("$log10(p/p_0$)")
+plt.ylabel("cross section [$m^2$]")
+plt.legend()
+plt.show()
+
+print(y)
+print(d(6))

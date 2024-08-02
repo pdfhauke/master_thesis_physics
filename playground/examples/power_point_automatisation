@@ -1,0 +1,15 @@
+from pptx import Presentation 
+import os
+
+def update_presentation(pptx_path):
+    if os.path.exists(pptx_path):
+        pres = Presentation(pptx_path)
+    else:
+        pres = Presentation()
+    pres.save(pptx_path)
+
+#update_presentation("/Users/hdamerow/master_thesis/playground/firs_auto_ppt")
+
+
+
+
