@@ -308,7 +308,9 @@ print("2 dim R$^2$ of 2 dim linear fitting with ln(p) and T is: ", r_squared_2di
 
 #find out the maximal and minimal deviation with temperature and pressure where the deviation between simualated cross section and fitted one is largest
 deviation_lin_data_fit_max = np.max(abs(np.exp(fitted_z_data) -np.exp(z_data_array)))
+#array with the absolute and relative deviation between linear p-T fit of the ln(sigma) and its derived sigma and the computed sigma 
 deviation_lin_data_fit_array = np.exp(fitted_z_data) - np.exp(z_data_array)
+deviation_lin_data_fit_array_relative = deviation_lin_data_fit_array/ np.exp(z_data_array)
 print("max deviation computed and fitted ln(sigma): ", deviation_lin_data_fit_max)
 #get the pressure and temperature point where this happens
 #seems not to give always th right information but don"t know why 
@@ -326,16 +328,18 @@ print("The maximal deviation of linear fitting and simulated ln(sigma) is at ", 
 fig, ax = plt.subplots(subplot_kw = {"projection":"3d"})
 #ax.plot_surface(X,Y,z_data_array)
 #ax.scatter(X,Y,z_data_array)
-ax.plot_surface(X,Y,np.exp(z_data_array))
-ax.scatter(X,Y,np.exp(z_data_array))
+#ax.plot_surface(X,Y,np.exp(z_data_array))
+#ax.scatter(X,Y,np.exp(z_data_array))
 ax.set_ylabel("T [K]")
 ax.set_xlabel("log(p/p$_0$)")
 ax.set_zlabel("log(σ/σ$_0$)")
+ax.set_zlabel("deviation [%]")
 #sigma is the absorption cross section 
 ax.set_title("log(σ/σ$_0$) p-T-fit at  295 cm$^{-1}$ of O$_3$")
 #ax.plot_surface(X,Y,fitted_z_data, cmap ='viridis')
-ax.plot_surface(X,Y,np.exp(fitted_z_data), cmap ='viridis')
-ax.plot_surface(X,Y,deviation_lin_data_fit_array)
+#ax.plot_surface(X,Y,np.exp(fitted_z_data), cmap ='viridis')
+#ax.plot_surface(X,Y,deviation_lin_data_fit_array)
+ax.plot_surface(X,Y,deviation_lin_data_fit_array_relative*100)
 plt.show()
 plt.show()
 X,Y = np.meshgrid(x,y)
@@ -406,4 +410,4 @@ while i < 6:
 
 #print("2dim coefficients", result)
 #print ("M", M)
-#print(z_data)
+print(z_data_array[8][10])
