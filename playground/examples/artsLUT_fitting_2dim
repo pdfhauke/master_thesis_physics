@@ -53,7 +53,7 @@ excel_sheet_cross_sections = excel_table_cross_sections['Sheet1']
 
 temperaturepoint = 5
 specienumber = 0
-frequencynumber = 62
+frequencynumber = 64
 pressure = 11
 temperature = LUT.t_pert[temperaturepoint] + LUT.t_ref[temperaturepoint]
 
@@ -307,19 +307,29 @@ r_squared_2dim = 1 - fitted_z_data_res/(np.sum((z_data - mean_vector_2dim)**2))
 print("2 dim R$^2$ of 2 dim linear fitting with ln(p) and T is: ", r_squared_2dim)
 
 #find out the maximal and minimal deviation with temperature and pressure where the deviation between simualated cross section and fitted one is largest
-deviation_lin_data_fit_max = np.max(abs(np.exp(fitted_z_data) -np.exp(z_data_array)))
+deviation_lin_data_fit_max = np.max(abs(10**(fitted_z_data) -10**(z_data_array)))
 #array with the absolute and relative deviation between linear p-T fit of the ln(sigma) and its derived sigma and the computed sigma 
-deviation_lin_data_fit_array = np.exp(fitted_z_data) - np.exp(z_data_array)
-deviation_lin_data_fit_array_relative = deviation_lin_data_fit_array/ np.exp(z_data_array)
+deviation_lin_data_fit_array = 10**(fitted_z_data) - 10**(z_data_array)
+deviation_lin_data_fit_array_relative = deviation_lin_data_fit_array/ 10**(z_data_array)
+#maximal value of the relative deviation fit-data array 
+deviation_lin_data_fit_max_rel = np.max(abs(deviation_lin_data_fit_array_relative))
+
 print("max deviation computed and fitted ln(sigma): ", deviation_lin_data_fit_max)
 #get the pressure and temperature point where this happens
 #seems not to give always th right information but don"t know why 
-index_max_rel_2dim = np.argwhere(abs(np.exp(fitted_z_data) -np.exp(z_data_array)) == deviation_lin_data_fit_max)
-print("index of max deviation for 2 dim linear sigma fit: ",index_max_rel_2dim[0] )
-pressure_max_deviation = X[-index_max_rel_2dim[0][0]][-index_max_rel_2dim[0][0]]
-temperature_max_deviation = Y[index_max_rel_2dim[0][1]][index_max_rel_2dim[0][1]]
-print(index_max_rel_2dim[0][1])
-print("The maximal deviation of linear fitting and simulated ln(sigma) is at ", pressure_max_deviation, " Pa and at ", temperature_max_deviation, " K and it's ", deviation_lin_data_fit_max  )
+index_max_abs_2dim = np.argwhere(abs(10**(fitted_z_data) -10**(z_data_array)) == deviation_lin_data_fit_max)
+index_max_rel_2dim = np.argwhere(deviation_lin_data_fit_array_relative ==deviation_lin_data_fit_max_rel)
+print("index of max deviation for 2 dim linear sigma fit: ",index_max_abs_2dim[0] )
+print("index of rel. max deviation for 2 dim linear sigma fit: ",index_max_rel_2dim[0] )
+#pressure_max_deviation = X[-index_max_abs_2dim[0][0]][-index_max_abs_2dim[0][0]]
+#temperature_max_deviation = Y[index_max_abs_2dim[0][1]][index_max_abs_2dim[0][1]]
+print(index_max_abs_2dim[0][0])
+#find correponding z-value for maximal deviation and compute the maximal relative error 
+#deviation_lin_data_fit_max_rel  = deviation_lin_data_fit_max / 10**(z_data_array[index_max_rel_2dim[0][0]][index_max_rel_2dim[0][1]])
+
+print("The maximal relative deviation is",deviation_lin_data_fit_max_rel*100, "%") 
+print("The maximal deviation of linear fitting and simulated ln(sigma) is at ", LUT.p_grid[index_max_abs_2dim[0][1]], " Pa and at ", LUT.t_pert[index_max_abs_2dim[0][0]] + LUT.t_ref[2], " K and it's ", deviation_lin_data_fit_max  )
+print("The maximal rel. deviation of linear fitting and simulated ln(sigma) is at ", LUT.p_grid[index_max_rel_2dim[0][1]], " Pa and at ", LUT.t_pert[index_max_rel_2dim[0][0]] + LUT.t_ref[2], " K and it's ", deviation_lin_data_fit_max_rel*100,"%"  )
 #print(X)
 #print(Y)
 
@@ -337,9 +347,9 @@ ax.set_zlabel("deviation [%]")
 #sigma is the absorption cross section 
 ax.set_title("log(σ/σ$_0$) p-T-fit at  295 cm$^{-1}$ of O$_3$")
 #ax.plot_surface(X,Y,fitted_z_data, cmap ='viridis')
-#ax.plot_surface(X,Y,np.exp(fitted_z_data), cmap ='viridis')
-#ax.plot_surface(X,Y,deviation_lin_data_fit_array)
-ax.plot_surface(X,Y,deviation_lin_data_fit_array_relative*100)
+ax.plot_surface(X,Y,10**(fitted_z_data), cmap ='viridis')
+ax.plot_surface(X,Y,deviation_lin_data_fit_array)
+#ax.plot_surface(X,Y,deviation_lin_data_fit_array_relative*100)
 plt.show()
 plt.show()
 X,Y = np.meshgrid(x,y)
